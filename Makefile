@@ -9,14 +9,18 @@ THIS_PROJECT  := nq
 
 .PHONY: serve watch
 
-build:
+build-env:
+	go mod download
+
+build: build-env
 	go build
 
 run: build
-	./nq
+	./nq -- sh -c 'sleep 2 && echo foo'
+	./nq -- sh -c 'sleep 2 && echo bar'
 
 serve:
-	while :; do ./main; done
+	./nq -s
 
 watch:
 	watcher
