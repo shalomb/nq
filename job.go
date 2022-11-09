@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -9,20 +10,25 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/sony/sonyflake"
 )
 
 type Job struct {
 	cmd       []string
 	timestamp int64
+	uuid      string
 }
 
 func (j *Job) parse(c []string) {
 	j.cmd = c
 	j.timestamp = time.Now().UnixNano()
+	flake := sonyflake.NewSonyflake(sonyflake.Settings{})
+	id, _ := flake.NextID()
+	j.uuid = fmt.Sprintf("%d", id)
 }
 
 func (j *Job) exec() (int, time.Duration) {
-	log.Printf("Processing job: %v", j)
+	log.Printf("Processing job: %v %v", j.uuid, j.cmd)
 	start := time.Now()
 	cmd := exec.Command(j.cmd[0], j.cmd[1:]...)
 

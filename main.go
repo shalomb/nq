@@ -1,3 +1,4 @@
+// Package main this is the package content
 package main
 
 import (
@@ -20,21 +21,19 @@ func main() {
 	customFormatter.FullTimestamp = true
 	log.SetFormatter(customFormatter)
 
-	log.Printf("args: %s\n", opts.Args())
-	if server == true {
+	if server {
 		var wg sync.WaitGroup
 		defer wg.Done()
-		log.Printf("server seems to be set?")
+		log.Printf("Server requested. Starting server")
 		startServer()
 		wg.Wait()
 		os.Exit(0)
 	}
 
 	if _, err := os.Stat(namedPipe); errors.Is(err, os.ErrNotExist) {
-		log.Fatalf("Error opening named pipe: %v (server not started)", namedPipe)
+		log.Fatalf("Error finding named pipe: %v (Server not started?)", namedPipe)
 	}
 
-	log.Printf("Testing named pipe: %s", namedPipe)
 	f, err := os.OpenFile(namedPipe, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
 	if err != nil {
 		log.Fatalf("Error opening named pipe: %v", err)
@@ -46,7 +45,7 @@ func main() {
 			log.Errorf("Error marshalling arguments to JSON")
 		}
 
-		log.Printf("Enqueue job with server: %s", string(b))
+		log.Printf("Send job: %s", string(b))
 		s, e := f.WriteString(string(b) + "\n")
 		if e != nil {
 			log.Warn(fmt.Sprintf("Server failed to acknowledge request: %v (%v)", e, s))
