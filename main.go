@@ -39,8 +39,9 @@ func main() {
 		log.Fatalf("Error opening named pipe: %v", err)
 	}
 
-	makeRequest := func() {
-		b, e := json.Marshal(opts.Args())
+	// TODO: Take CLI args or stdin
+	makeRequest := func(args []string) {
+		b, e := json.Marshal(args)
 		if e != nil {
 			log.Errorf("Error marshalling arguments to JSON")
 		}
@@ -54,7 +55,9 @@ func main() {
 	}
 
 	stat, _ := os.Stdin.Stat()
-	if (stat.Mode() & os.ModeCharDevice) == 0 {
+	if (stat.Mode() & os.ModeCharDevice) != 0 {
+		makeRequest(opts.Args())
+	} else {
 		r, _ := regexp.Compile(*inputPattern)
 		log.Printf("Stdin is a pipe! Matching stdin against: %v", r)
 		scanner := bufio.NewScanner(os.Stdin)
@@ -62,14 +65,12 @@ func main() {
 			in := scanner.Text()
 			if r.MatchString(in) {
 				log.Printf("%v matches %v", in, r)
-				makeRequest()
+				makeRequest([]string{in})
 			}
 		}
 		if err := scanner.Err(); err != nil {
 			log.Fatalf("Error reading in from stdin: %v", err)
 		}
-	} else {
-		makeRequest()
 	}
 	os.Exit(0)
 }

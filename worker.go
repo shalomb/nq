@@ -35,10 +35,10 @@ LOOP:
 				j := e.Value.(*Job)
 				q.queue.Init()
 
+ 				log.Printf("Processing job: %+v %+v", j.uuid, j.cmd)
 				r, t := j.exec()
 
-				log.Printf(" Processed job: %+v, %+v (in %v)", j.uuid, r, t)
-				log.Printf(" ")
+				log.Printf("Processed job:  %+v, %+v %+v (in %+v)", j.uuid, j.cmd, r, t)
 			}
 		}
 	}

@@ -49,7 +49,9 @@ func startServer() {
 	// https://stackoverflow.startServercom/a/45447384/742600
 	var e notify.EventInfo
 	c := make(chan notify.EventInfo, 5)
-	notify.Watch(namedPipe, c, notify.Write|notify.Remove)
+	if err = notify.Watch(namedPipe, c, notify.Write|notify.Remove); err != nil {
+		log.Fatal("Error setting up workers")
+	}
 	reader := bufio.NewReader(file)
 
 	for {

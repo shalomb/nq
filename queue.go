@@ -25,6 +25,6 @@ func (q *Queue) setup() {
 func (q *Queue) enqueue(j *Job) int {
 	log.Debugf("Enqueueing %v", j)
 	q.queue.PushBack(j)
-	log.Printf("  Enqueue done (%+v). q.queue len: %d", j.uuid, q.queue.Len())
+	log.Printf("  Enqueue done (uuid: %+v, queue len: %d)", j.uuid, q.queue.Len())
 	return 0
 }

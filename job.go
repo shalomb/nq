@@ -2,33 +2,45 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/sony/sonyflake"
 )
 
+var flake = sonyflake.NewSonyflake(sonyflake.Settings{})
+
+// Job Struct
 type Job struct {
 	cmd       []string
 	timestamp int64
-	uuid      string
+	uuid      uint64
+}
+
+func newUUID() uint64 {
+	id, err := flake.NextID()
+	if err != nil {
+		log.Fatalf("Error generating NextID(), %+v", err)
+	}
+	return id
 }
 
 func (j *Job) parse(c []string) {
 	j.cmd = c
 	j.timestamp = time.Now().UnixNano()
-	flake := sonyflake.NewSonyflake(sonyflake.Settings{})
-	id, _ := flake.NextID()
-	j.uuid = fmt.Sprintf("%d", id)
+	j.uuid = newUUID()
+}
+
+func timeSince(start time.Time) time.Duration {
+	return time.Since(start)
 }
 
 func (j *Job) exec() (int, time.Duration) {
-	log.Printf("Processing job: %v %v", j.uuid, j.cmd)
 	start := time.Now()
 	cmd := exec.Command(j.cmd[0], j.cmd[1:]...)
 
@@ -36,18 +48,20 @@ func (j *Job) exec() (int, time.Duration) {
 	cmd.Stdout = io.MultiWriter(os.Stdout, &stdoutBuf)
 	cmd.Stderr = io.MultiWriter(os.Stderr, &stderrBuf)
 
-	err := cmd.Run()
-	elapsed := time.Since(start)
+	if err := cmd.Start(); err != nil {
+		log.Errorf("%+v", err)
+		return 127, timeSince(start)
+	}
 
-	if err != nil {
+	if err := cmd.Wait(); err != nil {
 		if exiterr, ok := err.(*exec.ExitError); ok {
-			log.Errorf("exitcode: %s: %d", err, exiterr.ExitCode())
+			log.Errorf("  %s: %d", err, exiterr.ExitCode())
 			log.Printf("\a")
-			return exiterr.ExitCode(), elapsed
+			return exiterr.ExitCode(), timeSince(start)
 		}
 	}
 
-	outStr, errStr := string(stdoutBuf.Bytes()), string(stderrBuf.Bytes())
+	outStr, errStr := stdoutBuf.String(), stderrBuf.String()
 
 	if len(outStr) > 0 {
 		for _, line := range strings.Split(strings.TrimSuffix(outStr, "\n"), "\n") {
@@ -61,5 +75,6 @@ func (j *Job) exec() (int, time.Duration) {
 		}
 	}
 
-	return 0, elapsed
+	exitCode := cmd.ProcessState.Sys().(syscall.WaitStatus).ExitStatus()
+	return exitCode, timeSince(start)
 }

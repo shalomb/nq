@@ -1,4 +1,4 @@
-module nq
+module github.com/shalomb/nq
 
 go 1.19
 

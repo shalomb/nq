@@ -1,51 +1,55 @@
-nq(1) - A simple last-job-in-queue command executor
+nq(1) - A simple last-in-queue command executor
 
 ```
 # Start the server
 
 $ nq -s
+INFO[21:06:15.9488] Server requested. Starting server
 ...
-INFO[20:36:29.4928] Starting server
+INFO[21:06:15.952] Setting up worker
+INFO[21:06:15.9521] Worker started
 
 
-# Push commands to the server
+# In another shell - push commands to the server
 
-$ nq -- sh -c 'make build test'  # Returns immediately, does not block
-$ nq -- sh -c 'make build test'
+$ nq -- sh -c 'make build test'  # Queued, starts running, returns immediately, does not block
+$ nq -- sh -c 'make build test'  # Queued, likely never runs
+$ nq -- sh -c 'make build test'  # Queued, likely never runs
+$ nq -- sh -c 'make build test'  # Queued, runs
 ```
 
 ## Why?
 
-In most CI pipelines, build tasks/jobs are blocking and this causes queue
-management problems.
+In most build pipelines, processing build tasks/jobs is a blocking activity
+and this causes a problem in managing queues where multiple _fire-and-forget_
+jobs can be submitted.
 
-If the system  triggering the CI commands  does so at a rate  greater than the
-rate the CI system can process jobs  - two unwanted things arise (1) the queue
-length increases (2) new commands cannot be submitted as the previous commands
-block.
+If jobs are submitted at a rate  greater than the processing time - two
+unwanted things arise
 
-`nq` allows the non-blocking intake of multiple (identical) jobs and
-will begin processing the last job taken, disregarding all previous jobs.
+- (1) the queue length increases
+- (2) new commands cannot be submitted as the previous commands block
 
-As the `nq` client does not block, it cannot wait to check the exit status
-of the command(s) submitted to the queue. In a future version, the ability
-to query the health of the "builds" will be possible.
+`nq` allows the non-blocking intake of multiple (identical) jobs and will
+begin processing the last job in the job queue, ignoring and discarding all
+the others that precede it.
+
+Additionally, the `nq` client does not block, it returns immediately after pushing the
+job command to the server. This frees up the shell allowing `nq` to be
+invoked again. In this mode `nq` does not wait to check the exit status
+of the command(s) submitted to the queue.
 
 ### Use case - Triggering builds from file changes in the editor
 
 e.g. in vim + tmux/tslime, you may wish to run tests on every buffer/file write
 
 ```
-:au BufWritePost,FileWritePost * silent :Tmux make build
+:au BufWritePost,FileWritePost * silent :Tmux make build test
 ```
 
-While this works for quick test suites (desirable), `make` blocks until
-the tests have completed and so a subsequent `make ...` command cannot
-be accepted over an already running command.
+Here `make` blocks until it has finished processing.
 
-With `nq` wrapping the command, flow is non-blocking and you can make
-as many edits and saves as you like - only the last issued command
-is triggered.
+With `nq` wrapping the command, flow is non-blocking
 
 ```
 :au BufWritePost,FileWritePost * silent :Tmux nq -- make build
@@ -60,7 +64,7 @@ matches a regular expression.
 inotifywait -q -e close_write -m . | nq -p CREATE -- make build test
 ```
 
-## Using a custom client
+## Integrations with custom clients
 
 Simply write an array of strings as a JSON string to the named pipe.
 

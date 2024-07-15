@@ -16,8 +16,18 @@ build-env:
 	go mod download
 
 run: build
-	./nq -- sh -c 'sleep 2 && echo foo'
-	./nq -- sh -c 'sleep 2 && echo bar'
+	./nq -- sh -c 'sleep 1 && echo foo'
+	sleep 0.1
+	./nq -- sh -c 'sleep 2 && echo not processed'
+	./nq -- sh -c 'sleep 2 && echo not processed'
+	./nq -- sh -c 'sleep 2 && echo not processed'
+	./nq -- sh -c 'sleep 2 && echo not processed'
+	./nq -- sh -c 'sleep 2 && echo not processed'
+	./nq -- sh -c 'sleep 2 && echo not processed'
+	./nq -- sh -c 'sleep 2 && echo not processed'
+	./nq -- sh -c 'sleep 1 && echo bar'
+	sleep 1.5
+	./nq -- sh -c 'sleep 1 && echo baz'
 
 serve:
 	./nq -s
